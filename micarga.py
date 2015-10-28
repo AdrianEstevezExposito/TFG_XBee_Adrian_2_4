@@ -9,27 +9,36 @@ class modulo:
    nombreModulo = ""
    archivoModulo = ""
    dicpines = {"1":"","2":"","3":"","4":"","5":"","6":"","7":"","8":"","9":"","10":"","11":"","12":"","13":"","14":"","15":"","16":"","17":"","18":"","19":"","20":""}
-   pinescargados = []
+  # pinescargados = [] #Es posible que así esté mal instanciado
    
-   def pedirnombre(self):
+   
+   def __init__(self):
+        self.nombreModulo = raw_input("Nombre del módulo>")
+        self.pinescargados = {}    # crea una nueva lista vacía para cada modulo
+
+   """def pedirnombre(self):
      try:
        nombreModulo = raw_input("Nombre del módulo>")
      except EOFError: #EOF
        print "--Saliendo del programa--"
-       break
+       sys.exit(1)
      else:
        archivoModulo = nombreModulo
        archivoModulo += ".json"
-       print "Nombre del archivo json del que cargar: {}".format(archivoModulo) 
+       print "Nombre del archivo json del que cargar: {}".format(archivoModulo) """
    
-   def cargar(self):  
-     with open(archivoModulo) as f:
-       for line in f:
-	 pinescargados.append(json.loads(line))
-     print "Pines cargados: {}".format(pinescargados) 
-        
-remoto = modulo()
+   def cargar(self):
+     self.archivoModulo = self.nombreModulo
+     self.archivoModulo += ".json"
+     print "Nombre del archivo json del que cargar: {}".format(self.archivoModulo)
+     with open(self.archivoModulo) as f:
+       self.pinescargados = json.load(f)
+     print "Pines cargados: {}".format(self.pinescargados)
+     #Se muestran "u" que significan unicode, no tiene importancia. (CREO)
 
-remoto.pedirnombre()
-
-remoto.cargar()
+####################################################################
+## Programa principal
+if __name__ == "__main__":
+  remoto = modulo()
+  
+  remoto.cargar()
