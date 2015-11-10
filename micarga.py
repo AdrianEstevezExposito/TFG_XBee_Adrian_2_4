@@ -52,7 +52,23 @@ class modulo:
 	 value = str(value)
        nuevodicpines[key] = value
      self.dicpines_str = nuevodicpines
+     print "Pines cargados convertidos a str: {}".format(self.dicpines_str)
      return data
+   
+   def nombrar(self):
+     for k, v in self.dicpines_str.iteritems():
+       if v != "":
+	 try:
+	   nombreDisp = raw_input("En el pin {} hay un {}. Distinguir como:>".format(k, v))
+	 except EOFError:
+	   print "--Saliendo del programa--"
+	   sys.exit(1)
+	 else:
+	   self.dicpines_asignados[nombreDisp] = k	#guardar el pin
+	   self.dicdispositivos[nombreDisp] = v		#guardar el tipo de dispositivo
+       else:
+	 print "Pin {} no asignado".format(k)
+     print "---Nombre y clase de cada dispositivo:---\n {}\n".format(self.dicdispositivos)
    
    def f_actuadores(self, nombre):
      while True:
@@ -185,24 +201,9 @@ if __name__ == "__main__":
   device.cargar()
   
   device.to_str(device.pinescargados)	#Necesario convertir los valores en string para mejor manejo
-    
-  print "Pines cargados convertidos a str: {}".format(device.dicpines_str)
   
-  for k, v in device.dicpines_str.iteritems():
-    if v != "":
-      try:
-	nombreDisp = raw_input("En el pin {} hay un {}. Distinguir como:>".format(k, v))
-      except EOFError:
-	print "--Saliendo del programa--"
-	sys.exit(1)
-      else:
-	device.dicpines_asignados[nombreDisp] = k	#guardar el pin
-	device.dicdispositivos[nombreDisp] = v		#guardar el tipo de dispositivo
-    else:
-      print "Pin {} no asignado".format(k)
-      
-  print "---Nombre y clase de cada dispositivo:---\n {}\n".format(device.dicdispositivos)
-  
+  device.nombrar()
+
   while True:
     try:
       interactuado = raw_input("Nombre del dispositivo con el que interactuar>")
@@ -220,4 +221,12 @@ if __name__ == "__main__":
     print "Para el dispositivo '{}' existen las siguientes acciones:".format(interactuado)
     tipo_actual = device.dicdispositivos[interactuado]
     device.dic_options[tipo_actual](device, interactuado)
+    try:
+      com = raw_input("Comando a enviar>")
+    except EOFError:
+      print "--Saliendo del programa--"
+      sys.exit(1)
+    if len(com) == 0:
+      continue
     
+    #SIGUIENTE: Incorporar comando final a enviar -> Ejem: E15:D01
