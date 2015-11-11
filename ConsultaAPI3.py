@@ -85,6 +85,8 @@ def hiloPrincipal( du ):
 
   while True:
     
+    time.sleep(1)
+    
     #---#
     try:
       interactuado = raw_input("Nombre del dispositivo con el que interactuar>")
@@ -104,12 +106,17 @@ def hiloPrincipal( du ):
     device.dic_options[tipo_actual](device, interactuado)
     
     #---#
-    
-    time.sleep(1)
     try:
-      s = raw_input("Esperando comandos> ")
+      c_manual = raw_input("¿Introducir el comando indicado?\n(s/n)>")
     except EOFError: #EOF
-      break
+      break    
+    if c_manual == "s":
+      s = device.com_M
+    else:
+      try:
+	s = raw_input("Esperando comandos> ")
+      except EOFError: #EOF
+	break
     if len(s) == 0:
       continue
     sNorm = s.upper().strip()
@@ -174,6 +181,7 @@ if __name__ == "__main__":
   
   device.to_str(device.pinescargados)	#Necesario convertir los valores en string para mejor manejo
   
-  device.nombrar()
+  if device.check_config():
+    device.nombrar()
   
   hiloPrincipal( dialogoAPI(None) )
