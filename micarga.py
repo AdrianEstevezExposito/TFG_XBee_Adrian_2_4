@@ -9,6 +9,8 @@ import time
 class modulo:
    nombreModulo = ""
    archivoModulo = ""
+   archivoPines = ""
+   archivoDispositivos = ""
    dic_comandos = {"1":"P0","2":"","3":"","4":"P2","5":"","6":"","7":"P1","8":"","9":"D8","10":"","11":"D4","12":"","13":"","14":"","15":"D5","16":"D6","17":"D3","18":"D2","19":"D1","20":"D0"}
   # pinescargados = [] #Es posible que así esté mal instanciado
    
@@ -22,11 +24,13 @@ class modulo:
 	 sys.exit(1)
        if len(self.nombreModulo) == 0:
 	   continue
-       self.pinescargados = {}    # crea una nueva lista vacía para cada modulo
+       self.pinescargados = {}  # crea una nueva lista vacía para cada modulo
        self.dicpines_str = {}	# además de otra para la copia en formato str.
        
        self.dicdispositivos = {}	# diccionario en el que guardar el nombre de cada actuador
        self.dicpines_asignados = {}	# diccionario en el que guardar la asociacion nombre-pin
+       
+       self.com_M = ""
        break
      
    def cargar(self):
@@ -69,6 +73,47 @@ class modulo:
        else:
 	 print "Pin {} no asignado".format(k)
      print "---Nombre y clase de cada dispositivo:---\n {}\n".format(self.dicdispositivos)
+     
+     #Crear el nombre de los archivos de configuración
+     config_pines = self.nombreModulo
+     config_pines += "_pines.json"
+     config_disp = self.nombreModulo
+     config_disp += "_dispositivos.json"
+     
+     with open(config_pines, 'w') as outfile:
+      json.dump(self.dicpines_asignados, outfile, sort_keys = True, indent = 4, ensure_ascii=False)
+     with open(config_disp, 'w') as outfile:
+      json.dump(self.dicdispositivos, outfile, sort_keys = True, indent = 4, ensure_ascii=False)
+
+
+   def check_config(self):
+     
+     #Crear el nombre de los archivos de configuración
+     self.archivoPines = self.nombreModulo
+     self.archivoPines += "_pines.json"
+     self.archivoDispositivos = self.nombreModulo
+     self.archivoDispositivos += "_dispositivos.json" 
+     
+     try:
+       with open(self.archivoPines) as f:
+	 self.dicpines_asignados = json.load(f)
+     except IOError:
+       print "No existe configuración de pines previa, se pedirá a continuacion"
+       return True
+     else:
+       print "Configuración de pines cargada con éxito:\n {}\n".format(self.dicpines_asignados)
+     
+     try:
+       with open(self.archivoDispositivos) as f:
+	 self.dicdispositivos = json.load(f)
+     except IOError:
+       print "No existe configuración de dispositivos previa, se pedirá a continuacion"
+       self.dicpines_asignados = {}
+       return True
+     else:
+       print "Configuración de dispositivos cargada con éxito:\n {}\n".format(self.dicdispositivos)
+       
+     return False
    
    def f_actuadores(self, nombre):
      while True:
@@ -81,20 +126,24 @@ class modulo:
       if len(opt) == 0:
 	continue
       if opt == "1":
-	print "Activando actuador.\n"
+	print "Se activará actuador.\n"
       elif opt == "2":
-	print "Activando actuador durante cierto tiempo\n"
+	print "Se activará el actuador durante cierto tiempo\n"
       elif opt == "3":
-	print "Desactivando el actuador\n"
+	print "Se desactivará el actuador\n"
       else:
 	print "Opción no válida. Opciones válidas: 1 -- 2 -- 3"
 	continue
       print "El pin sobre el que se actuará será el {}\n".format(self.dicpines_asignados[nombre])
       pin_actual = self.dicpines_asignados[nombre]
       if self.dic_comandos[pin_actual] != "":
-	print "Por tanto, el comando utilizado será {}\n".format(self.dic_comandos[pin_actual])
+	self.com_M = self.nombreModulo
+	self.com_M += ":"
+	self.com_M += self.dic_comandos[pin_actual]
+	print "Por tanto, el comando utilizado será '{}'\n".format(self.com_M)
       else:
 	print "ERROR: No existe comando para trabajar sobre este pin"
+	self.com_M = ""
       break
      
    def f_indicadores(self, nombre):
@@ -108,22 +157,26 @@ class modulo:
       if len(opt) == 0:
 	continue
       if opt == "1":
-	print "Activando indicador.\n"
+	print "Se activará el indicador.\n"
       elif opt == "2":
-	print "Activando indicador durante cierto tiempo\n"
+	print "Se activará el indicador durante cierto tiempo\n"
       elif opt == "3":
 	print "Parpadeo\n"
       elif opt == "4":
-	print "Desactivando el indicador\n"
+	print "Se desactivará el indicador\n"
       else:
 	print "Opción no válida. Opciones válidas: 1 -- 2 -- 3 -- 4"
 	continue
       print "El pin sobre el que se actuará será el {}\n".format(self.dicpines_asignados[nombre])
       pin_actual = self.dicpines_asignados[nombre]
       if self.dic_comandos[pin_actual] != "":
-	print "Por tanto, el comando utilizado será {}\n".format(self.dic_comandos[pin_actual])
+	self.com_M = self.nombreModulo
+	self.com_M += ":"
+	self.com_M += self.dic_comandos[pin_actual]
+	print "Por tanto, el comando utilizado será '{}'\n".format(self.com_M)
       else:
 	print "ERROR: No existe comando para trabajar sobre este pin"
+	self.com_M = ""
       break
     
    def f_pulsadores(self, nombre):
@@ -150,9 +203,13 @@ class modulo:
       print "El pin sobre el que se actuará será el {}\n".format(self.dicpines_asignados[nombre])
       pin_actual = self.dicpines_asignados[nombre]
       if self.dic_comandos[pin_actual] != "":
-	print "Por tanto, el comando utilizado será {}\n".format(self.dic_comandos[pin_actual])
+	self.com_M = self.nombreModulo
+	self.com_M += ":"
+	self.com_M += self.dic_comandos[pin_actual]
+	print "Por tanto, el comando utilizado será '{}'\n".format(self.com_M)
       else:
 	print "ERROR: No existe comando para trabajar sobre este pin"
+	self.com_M = ""	
       break
     
    def f_analogicos(self, nombre):
@@ -166,24 +223,28 @@ class modulo:
       if len(opt) == 0:
 	continue
       if opt == "1":
-	print "Fijando umbrales.\n"	#Pedir variable (valor actual potenciometro)
+	print "Se fijarán los umbrales.\n"	#Pedir variable (valor actual potenciometro)
       elif opt == "2":
-	print "Fijando histeresis\n"	#Pedir variable (valor actual potenciometro)
+	print "Se fijará la histéresis\n"	#Pedir variable (valor actual potenciometro)
       elif opt == "3":
-	print "Defina evento de zona minima\n"	#Pedir variable (dispositivo)
+	print "Se definirá el evento de zona minima\n"	#Pedir variable (dispositivo)
       elif opt == "4":
-	print "Defina evento de zona maxima\n"	#Pedir variable (dispositivo) 
+	print "Se definirá el evento de zona maxima\n"	#Pedir variable (dispositivo) 
       elif opt == "5":
-	print "Defina evento de zona media\n"	#Pedir variable (dispositivo)
+	print "Se definirá el evento de zona media\n"	#Pedir variable (dispositivo)
       else:
 	print "Opción no válida. Opciones válidas: 1 -- 2 -- 3 -- 4 -- 5"
 	continue
       print "El pin sobre el que se actuará será el {}\n".format(self.dicpines_asignados[nombre])
       pin_actual = self.dicpines_asignados[nombre]
       if self.dic_comandos[pin_actual] != "":
-	print "Por tanto, el comando utilizado será {}\n".format(self.dic_comandos[pin_actual])
+	self.com_M = self.nombreModulo
+	self.com_M += ":"
+	self.com_M += self.dic_comandos[pin_actual]
+	print "Por tanto, el comando utilizado será '{}'\n".format(self.com_M)
       else:
 	print "ERROR: No existe comando para trabajar sobre este pin"
+	self.com_M = ""
       break
     
    # Mapear las opciones con su bloque de funcion
@@ -202,7 +263,8 @@ if __name__ == "__main__":
   
   device.to_str(device.pinescargados)	#Necesario convertir los valores en string para mejor manejo
   
-  device.nombrar()
+  if device.check_config():
+    device.nombrar()
 
   while True:
     try:
