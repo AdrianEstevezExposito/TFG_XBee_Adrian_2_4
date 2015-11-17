@@ -5,13 +5,28 @@ import json
 import sys
 import os
 import time
+import threading
+
+class T_indicador(threading.Thread): 
+  # Se indica que es una clase heredada de Thread que fue importada por threading.
+  def __init__(self):
+    threading.Thread.__init__(self)  # Importante, sin esto no funciona, basta con un copy/paste.
+    self.n = 0  
+    
+  def run(self): # Contiene el codigo a ejecutar por el hilo.
+    print "\nEncendiendo indicador..."
+    time.sleep(self.n)
+    print "\nApagando indicador. Tiempo encendido = {}".format(self.n)
 
 class modulo:
    nombreModulo = ""
    archivoModulo = ""
    archivoPines = ""
    archivoDispositivos = ""
-   dic_comandos = {"1":"P0","2":"","3":"","4":"P2","5":"","6":"","7":"P1","8":"","9":"D8","10":"","11":"D4","12":"","13":"","14":"","15":"D5","16":"D6","17":"D3","18":"D2","19":"D1","20":"D0"}
+   
+   dic_comandos =  {"1":"P0","2":"","3":"","4":"P2","5":"","6":"","7":"P1","8":"","9":"","10":"","11":"D4","12":"","13":"","14":"","15":"D5","16":"D6","17":"D3","18":"D2","19":"D1","20":"D0"}
+   
+   dic_com_default = {"1":"P01","2":"","3":"","4":"P20","5":"","6":"","7":"P10","8":"","9":"","10":"","11":"D40","12":"","13":"","14":"","15":"D51","16":"D60","17":"D30","18":"D22","19":"D10","20":"D01"}
   # pinescargados = [] #Es posible que así esté mal instanciado
    
    
@@ -41,7 +56,7 @@ class modulo:
        with open(self.archivoModulo) as f:
 	 self.pinescargados = json.load(f)
      except IOError:
-       print "El módulo indicado no dispone de fichero de configuración, inicialícelo primero"
+       print "ERROR: El módulo indicado no dispone de fichero de configuración, inicialícelo primero."
        sys.exit(1)
      #print "Pines cargados: {}".format(self.pinescargados)
      #Se muestran "u" que significan unicode, no tiene importancia. (CREO)
@@ -147,6 +162,7 @@ class modulo:
       break
      
    def f_indicadores(self, nombre):
+     opc_indicador = ""
      while True:
       print "1-Activar indicador \n2-Activar durante cierto tiempo \n3-Activar con un tipo de parpadeo (tiempo apagado/tiempo encendido) \n4-Desactivar"
       try:
@@ -158,12 +174,24 @@ class modulo:
 	continue
       if opt == "1":
 	print "Se activará el indicador.\n"
+	opc_indicador = "5"
       elif opt == "2":
 	print "Se activará el indicador durante cierto tiempo\n"
+	try:
+	  opt = raw_input("Indique en segundos el tiempo durante el que activar el indicador>")
+        except EOFError:
+	  print "--Saliendo del programa--"
+	  sys.exit(1)
+	hilo_indicador = T_indicador()
+	hilo_indicador.n = float(opt)
+	hilo_indicador.start() # Se indica a la instancia de hilo hilo que comience su ejecucion
+	continue  
       elif opt == "3":
 	print "Parpadeo\n"
+	# Investigar función parpadeo.
       elif opt == "4":
 	print "Se desactivará el indicador\n"
+	opc_indicador = "4"
       else:
 	print "Opción no válida. Opciones válidas: 1 -- 2 -- 3 -- 4"
 	continue
@@ -173,6 +201,7 @@ class modulo:
 	self.com_M = self.nombreModulo
 	self.com_M += ":"
 	self.com_M += self.dic_comandos[pin_actual]
+	self.com_M += opc_indicador
 	print "Por tanto, el comando utilizado será '{}'\n".format(self.com_M)
       else:
 	print "ERROR: No existe comando para trabajar sobre este pin"
