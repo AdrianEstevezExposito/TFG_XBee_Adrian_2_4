@@ -6,17 +6,80 @@ import sys
 import os
 import time
 import threading
+import re
+from Conexiones import *
+from DialogaAPI import *
+
 
 class T_indicador(threading.Thread): 
   # Se indica que es una clase heredada de Thread que fue importada por threading.
   def __init__(self):
     threading.Thread.__init__(self)  # Importante, sin esto no funciona, basta con un copy/paste.
-    self.n = 0  
+    self.n = 0
     
   def run(self): # Contiene el codigo a ejecutar por el hilo.
-    print "\nEncendiendo indicador..."
-    time.sleep(self.n)
-    print "\nApagando indicador. Tiempo encendido = {}".format(self.n)
+    du2 = dialogoAPI( conexion_ser("/dev/ttyUSB0",115200) )
+    du2.start()
+    
+    cmds = 'SH, SL, VR, AI, OP, CH, NI, ND'
+    print "Enviando comandos AT locales '{}'".format(cmds)
+    du2.comandosATlocal( cmds )
+
+    print "Espere..."
+    time.sleep(6)
+    while True:
+      print "\nEncendiendo indicador..."
+      s = "E13:P05"
+      m = re.search(r"([^:]*):(.*)", s)
+      ( remota, comandos ) = m.groups()
+      if len( remota )>0: #se epecifico nombre o dirección
+	#Probamos primero con el nombre
+	serial = du2.nombretoSerial( remota )
+	if serial<0: #no se encontró nombre, tratamos dirección 16
+	  serial = du2.dir16toSerial( hexStr2Int( remota ) )
+	if serial<0:
+	  print "Especificación remota '{}' no encontrada, NO enviamos".format( remota )
+	  break
+	Remoto = serial
+	print "Usando dirección remota 0x{:X}".format( Remoto )
+      if Remoto<0:
+	print "No hay dirección remota válida almacenada, NO enviamos"
+	break
+      try:
+	#print "Enviando comandos: >{}<".format(comandos)
+	du2.comandosATremoto( Remoto, -1, comandos )
+      except:
+	print "Error al enviar comandos remotos '{}'".format( comandos )
+	break
+    
+      time.sleep(self.n)
+      
+      s = "E13:P01"
+      m = re.search(r"([^:]*):(.*)", s)
+      ( remota, comandos ) = m.groups()
+      if len( remota )>0: #se epecifico nombre o dirección
+	#Probamos primero con el nombre
+	serial = du2.nombretoSerial( remota )
+	if serial<0: #no se encontró nombre, tratamos dirección 16
+	  serial = du2.dir16toSerial( hexStr2Int( remota ) )
+	if serial<0:
+	  print "Especificación remota '{}' no encontrada, NO enviamos".format( remota )
+	  break
+	Remoto = serial
+	print "Usando dirección remota 0x{:X}".format( Remoto )
+      if Remoto<0:
+	print "No hay dirección remota válida almacenada, NO enviamos"
+	break
+      try:
+	#print "Enviando comandos: >{}<".format(comandos)
+	du2.comandosATremoto( Remoto, -1, comandos )
+      except:
+	print "Error al enviar comandos remotos '{}'".format( comandos )
+	
+      print "\nApagando indicador. Tiempo encendido = {}".format(self.n)
+      break
+    du2.finish()
+    du2.join()
 
 class modulo:
    nombreModulo = ""
@@ -46,6 +109,7 @@ class modulo:
        self.dicpines_asignados = {}	# diccionario en el que guardar la asociacion nombre-pin
        
        self.com_M = ""
+       self.pasa = 0
        break
      
    def cargar(self):
@@ -185,7 +249,8 @@ class modulo:
 	hilo_indicador = T_indicador()
 	hilo_indicador.n = float(opt)
 	hilo_indicador.start() # Se indica a la instancia de hilo hilo que comience su ejecucion
-	continue  
+	self.pasa = 1
+	break
       elif opt == "3":
 	print "Parpadeo\n"
 	# Investigar función parpadeo.
