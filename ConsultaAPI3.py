@@ -123,6 +123,7 @@ def hiloPrincipal( du ):
     
     time.sleep(1)
     
+    device.pasa = 0
     #---#
     try:
       interactuado = raw_input("Nombre del dispositivo con el que interactuar>")
@@ -142,65 +143,66 @@ def hiloPrincipal( du ):
     device.dic_options[tipo_actual](device, interactuado)
     
     #---#
-    try:
-      c_manual = raw_input("¿Introducir el comando indicado?\n(s/n)>")
-    except EOFError: #EOF
-      break    
-    if c_manual == "s":
-      s = device.com_M
-    else:
+    if device.pasa == 0:
       try:
-	s = raw_input("Esperando comandos> ")
+	c_manual = raw_input("¿Introducir el comando indicado?\n(s/n)>")
       except EOFError: #EOF
-	break
-    if len(s) == 0:
-      continue
-    sNorm = s.upper().strip()
-    if sNorm=="DEBUG":
-      depura = not depura
-      print "\nEstado de depuración: {}\n".format( depura )
-      if depura:
-        logging.getLogger().setLevel( logging.DEBUG )
+	break    
+      if c_manual == "s":
+	s = device.com_M
       else:
-        logging.getLogger().setLevel( logging.INFO )
-      continue
-    if sNorm=="TABLA":
-      print "\nTabla de nodos: {}\n".format( du.tablaDir2Str() )
-      continue
-    if sNorm=="BREVE":
-      Breve = not Breve
-      print "\nModo breve es: {}\n".format( Breve )
-      du.setModoBreveRecepcion( Breve )
-      continue
+	try:
+	  s = raw_input("Esperando comandos> ")
+	except EOFError: #EOF
+	  break
+      if len(s) == 0:
+	continue
+      sNorm = s.upper().strip()
+      if sNorm=="DEBUG":
+	depura = not depura
+	print "\nEstado de depuración: {}\n".format( depura )
+	if depura:
+	  logging.getLogger().setLevel( logging.DEBUG )
+	else:
+	  logging.getLogger().setLevel( logging.INFO )
+	continue
+      if sNorm=="TABLA":
+	print "\nTabla de nodos: {}\n".format( du.tablaDir2Str() )
+	continue
+      if sNorm=="BREVE":
+	Breve = not Breve
+	print "\nModo breve es: {}\n".format( Breve )
+	du.setModoBreveRecepcion( Breve )
+	continue
 
-    #No es un comando vemos el tipo de AT
-    m = re.search(r"([^:]*):(.*)", s)
-    if m: #se ha utilizado los :
-      ( remota, comandos ) = m.groups()
-      if len( remota )>0: #se epecifico nombre o dirección
-        #Probamos primero con el nombre
-        serial = du.nombretoSerial( remota )
-        if serial<0: #no se encontró nombre, tratamos dirección 16
-          serial = du.dir16toSerial( hexStr2Int( remota ) )
-        if serial<0:
-          print "Especificación remota '{}' no encontrada, NO enviamos".format( remota )
-          continue
-        Remoto = serial
-        print "Usando dirección remota 0x{:X}".format( Remoto )
-      if Remoto<0:
-        print "No hay dirección remota válida almacenada, NO enviamos"
-        continue
-      try:
-        #print "Enviando comandos: >{}<".format(comandos)
-        du.comandosATremoto( Remoto, -1, comandos )
-      except:
-        print "Error al enviar comandos remotos '{}'".format( comandos )
-    else: #No aparecen los :, es comando local
-      try:
-        #print "Enviando comandos locales: >{}<".format(s)
-        du.comandosATlocal( s )
-      except:
-        print "Error al enviar comandos locales '{}'".format( s )
+      #No es un comando vemos el tipo de AT
+      m = re.search(r"([^:]*):(.*)", s)
+      if m: #se ha utilizado los :
+	( remota, comandos ) = m.groups()
+	if len( remota )>0: #se epecifico nombre o dirección
+	  #Probamos primero con el nombre
+	  serial = du.nombretoSerial( remota )
+	  if serial<0: #no se encontró nombre, tratamos dirección 16
+	    serial = du.dir16toSerial( hexStr2Int( remota ) )
+	  if serial<0:
+	    print "Especificación remota '{}' no encontrada, NO enviamos".format( remota )
+	    continue
+	  Remoto = serial
+	  print "Usando dirección remota 0x{:X}".format( Remoto )
+	if Remoto<0:
+	  print "No hay dirección remota válida almacenada, NO enviamos"
+	  continue
+	try:
+	  #print "Enviando comandos: >{}<".format(comandos)
+	  du.comandosATremoto( Remoto, -1, comandos )
+	except:
+	  print "Error al enviar comandos remotos '{}'".format( comandos )
+      else: #No aparecen los :, es comando local
+	try:
+	  #print "Enviando comandos locales: >{}<".format(s)
+	  du.comandosATlocal( s )
+	except:
+	  print "Error al enviar comandos locales '{}'".format( s )
 
   du.finish()
   du.join()
