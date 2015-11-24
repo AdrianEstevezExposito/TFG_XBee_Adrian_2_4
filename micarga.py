@@ -9,7 +9,8 @@ import threading
 import Queue
 import re
 from Conexiones import *
-from DialogaAPI import *
+from DialogaAPI2 import *
+
 
 class Hilo_Exe(threading.Thread): 
   # Se indica que es una clase heredada de Thread que fue importada por threading.
@@ -20,7 +21,8 @@ class Hilo_Exe(threading.Thread):
     self.stop = True
     
   def run(self): # Contiene el codigo a ejecutar por el hilo.
-    du2 = dialogoAPI( conexion_ser("/dev/ttyUSB0",115200) )
+    du2 = dialogoAPI( None )
+    
     du2.start()
     
     cmds = 'SH, SL, VR, AI, OP, CH, NI, ND'
@@ -28,7 +30,7 @@ class Hilo_Exe(threading.Thread):
     du2.comandosATlocal( cmds )
 
     print "Espere..."
-    time.sleep(5)
+    time.sleep(7)
     
     while self.stop:
       if self.in_queue.empty() == False:
@@ -159,7 +161,7 @@ class modulo:
        self.com_M = ""
        self.pasa = 0
        self.q = Queue.Queue()
-       self.T_Comandos = Hilo_Exe(self.q)
+       #self.T_Comandos = ( dialogoAPI(None, self.q) )
        self.flag_hilo_exe = 1
        break
      
@@ -245,6 +247,65 @@ class modulo:
        
      return False
    
+   def f_interfaz():
+      try:
+	def_manual = raw_input("¿Cargar configuración por defecto?\n(s/n)>")
+      except EOFError: #EOF
+	sys.exit(1)  
+      if def_manual == "s":
+	print "Cargando configuración inicial por defecto."
+	for key, value in self.dic_com_default.iteritems():
+	  if value != "":
+	    time.sleep(4)
+	    s = "E13:"
+	    s += value
+	    print "Comando enviado: {}".format(s)
+	    self.q.put(s)
+    
+      readline.parse_and_bind('set editing-mode vi')
+
+      while True:
+	
+	time.sleep(1)
+	
+	self.pasa = 0
+	#---#
+	try:
+	  interactuado = raw_input("Nombre del dispositivo con el que interactuar>")
+	except EOFError:
+	  print "--Saliendo del programa--"
+	  break
+	if len(interactuado) == 0:
+	  continue
+	
+	if self.dicdispositivos.has_key(interactuado):
+	  print "El dispositivo '{}' es un {}.\n".format(interactuado, self.dicdispositivos[interactuado])
+	else:
+	  print "El nombre de dispositivo indicado no existe, pruebe otra vez\n"
+	  continue
+	print "Para el dispositivo '{}' existen las siguientes acciones:".format(interactuado)
+	tipo_actual = self.dicdispositivos[interactuado]
+	self.dic_options[tipo_actual](device, interactuado)
+	
+	#---#
+	if self.pasa == 0:
+	  try:
+	    c_manual = raw_input("¿Introducir el comando indicado?\n(s/n)>")
+	  except EOFError: #EOF
+	    break    
+	  if c_manual == "s":
+	    s = self.com_M
+	  else:
+	    try:
+	      s = raw_input("Esperando comandos> ")
+	    except EOFError: #EOF
+	      break
+	  if len(s) == 0:
+	    continue
+	  
+	  #self.q.put(s)
+ 
+   
    def f_actuadores(self, nombre):
      while True:
       print "1-Activar actuador \n2-Activar actuador durante cierto tiempo \n3-Desactivar el actuador"
@@ -322,7 +383,7 @@ class modulo:
 	self.q.put(self.com_M)
 	self.pasa = 1
 	if self.flag_hilo_exe == 1:
-	  self.T_Comandos.start() # Se indica a la instancia de hilo hilo que comience su ejecucion
+	  #self.T_Comandos.start() # Se indica a la instancia de hilo hilo que comience su ejecucion
 	  self.flag_hilo_exe = 0
       else:
 	print "ERROR: No existe comando para trabajar sobre este pin"
@@ -441,4 +502,4 @@ if __name__ == "__main__":
     if len(com) == 0:
       continue
     
-    #SIGUIENTE: Incorporar comando final a enviar -> Ejem: E15:D05
+    #SIGUIENTE: Incorporar comando final a enviar -> Ejem: E15:D01
