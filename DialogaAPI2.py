@@ -74,7 +74,7 @@ class dialogoAPI(threading.Thread):
     el envio de comandos y respuestas a XBee
     Debe recibir una conexion inicializada
   '''
-  def __init__(self, c):
+  def __init__(self, c, q):
     threading.Thread.__init__(self)
     self.conexion = c
     self.frameIdAT = 0
@@ -87,6 +87,7 @@ class dialogoAPI(threading.Thread):
     # Posibilidades de 'Receive Options'
     self.recOpt = ['ERR', 'Ack', 'Broac']
     self.DevicesType = ['Coord', 'Router', 'End']
+    self.in_queue = q
 
 
   def setConexion(self, c):
@@ -575,10 +576,10 @@ if __name__ == "__main__":
 
   cmds = 'SH, SL, VR, AI, OP, CH, NI, ND'
   print "Enviamos los comandos AT: {}".format( cmds )
-  du.comandosAT( cmds )
+  du.comandosATlocal( cmds )
 
   time.sleep(10)
-  du.comandoATlocal( 'FR', 0)
+  du.comandoAT( 'FR', 0)
   time.sleep(10)
 
   du.finish()
