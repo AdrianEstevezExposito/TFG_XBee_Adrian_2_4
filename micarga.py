@@ -8,130 +8,49 @@ import time
 import threading
 import Queue
 import re
+import readline
 from Conexiones import *
 from DialogaAPI2 import *
-
-
-class Hilo_Exe(threading.Thread): 
-  # Se indica que es una clase heredada de Thread que fue importada por threading.
-  def __init__(self, q):
-    threading.Thread.__init__(self)  # Importante, sin esto no funciona
-    self.n = 0
-    self.in_queue = q
-    self.stop = True
-    
-  def run(self): # Contiene el codigo a ejecutar por el hilo.
-    du2 = dialogoAPI( None )
-    
-    du2.start()
-    
-    cmds = 'SH, SL, VR, AI, OP, CH, NI, ND'
-    print "Enviando comandos AT locales '{}'".format(cmds)
-    du2.comandosATlocal( cmds )
-
-    print "Espere..."
-    time.sleep(7)
-    
-    while self.stop:
-      if self.in_queue.empty() == False:
-	while not self.in_queue.empty():
-	  s = self.in_queue.get()
-	  m = re.search(r"([^:]*):(.*)", s)
-	  ( remota, comandos ) = m.groups()
-	  if len( remota )>0: #se epecifico nombre o dirección
-	    #Probamos primero con el nombre
-	    serial = du2.nombretoSerial( remota )
-	    if serial<0: #no se encontró nombre, tratamos dirección 16
-	      serial = du2.dir16toSerial( hexStr2Int( remota ) )
-	    if serial<0:
-	      print "Especificación remota '{}' no encontrada, NO enviamos".format( remota )
-	      break
-	    Remoto = serial
-	    print "Usando dirección remota 0x{:X}".format( Remoto )
-	  if Remoto<0:
-	    print "No hay dirección remota válida almacenada, NO enviamos"
-	    break
-	  try:
-	    #print "Enviando comandos: >{}<".format(comandos)
-	    du2.comandosATremoto( Remoto, -1, comandos )
-	  except:
-	    print "Error al enviar comandos remotos '{}'".format( comandos )	  
-	print "No hay más comandos a enviar"
-    
-    du2.finish()
-    du2.join()
     
 class T_indicador(threading.Thread): 
   # Se indica que es una clase heredada de Thread que fue importada por threading.
-  def __init__(self):
+  def __init__(self, q, q_indicador, com_M_on, com_M_off, opt):
     threading.Thread.__init__(self)  # Importante, sin esto no funciona
     self.n = 0
+    self.in_queue = q
+    self.detener_apagado = q_indicador
+    self.comando_on = com_M_on
+    self.comando_off = com_M_off
+    self.blink_or_sleep = opt
     
   def run(self): # Contiene el codigo a ejecutar por el hilo.
-    du2 = dialogoAPI( conexion_ser("/dev/ttyUSB0",115200) )
-    du2.start()
-    
-    cmds = 'SH, SL, VR, AI, OP, CH, NI, ND'
-    print "Enviando comandos AT locales '{}'".format(cmds)
-    du2.comandosATlocal( cmds )
-
-    print "Espere..."
-    time.sleep(6)
-    while True:
-      print "\nEncendiendo indicador..."
-      s = "E13:P05"				# --- ALERTA!!! Esto no se puede quedar así! ---
-      m = re.search(r"([^:]*):(.*)", s)
-      ( remota, comandos ) = m.groups()
-      if len( remota )>0: #se epecifico nombre o dirección
-	#Probamos primero con el nombre
-	serial = du2.nombretoSerial( remota )
-	if serial<0: #no se encontró nombre, tratamos dirección 16
-	  serial = du2.dir16toSerial( hexStr2Int( remota ) )
-	if serial<0:
-	  print "Especificación remota '{}' no encontrada, NO enviamos".format( remota )
+    if self.blink_or_sleep == "2":
+      while True:
+	self.in_queue.put(self.comando_on)
+	print "\nEncendiendo indicador..."
+	time.sleep(self.n)
+	if self.detener_apagado.empty() == False:
+	  print "\nOperación de apagado cancelada."
+	  self.detener_apagado.queue.clear()
 	  break
-	Remoto = serial
-	print "Usando dirección remota 0x{:X}".format( Remoto )
-      if Remoto<0:
-	print "No hay dirección remota válida almacenada, NO enviamos"
+	self.in_queue.put(self.comando_off)
+	print "\nTiempo esperando = {}".format(self.n)
 	break
-      try:
-	#print "Enviando comandos: >{}<".format(comandos)
-	du2.comandosATremoto( Remoto, -1, comandos )
-      except:
-	print "Error al enviar comandos remotos '{}'".format( comandos )
-	break
-    
-      time.sleep(self.n)
       
-      s = "E13:P01"				# --- ALERTA!!! Esto no se puede quedar así! ---
-      m = re.search(r"([^:]*):(.*)", s)
-      ( remota, comandos ) = m.groups()
-      if len( remota )>0: #se epecifico nombre o dirección
-	#Probamos primero con el nombre
-	serial = du2.nombretoSerial( remota )
-	if serial<0: #no se encontró nombre, tratamos dirección 16
-	  serial = du2.dir16toSerial( hexStr2Int( remota ) )
-	if serial<0:
-	  print "Especificación remota '{}' no encontrada, NO enviamos".format( remota )
+    elif self.blink_or_sleep == "3":
+      while True:
+	self.in_queue.put(self.comando_on)
+	print "\nEncendiendo indicador..."
+	time.sleep(self.n)
+	if self.detener_apagado.empty() == False:
+	  print "\nOperación de parpadeo cancelada."
+	  self.detener_apagado.queue.clear()
 	  break
-	Remoto = serial
-	print "Usando dirección remota 0x{:X}".format( Remoto )
-      if Remoto<0:
-	print "No hay dirección remota válida almacenada, NO enviamos"
-	break
-      try:
-	#print "Enviando comandos: >{}<".format(comandos)
-	du2.comandosATremoto( Remoto, -1, comandos )
-      except:
-	print "Error al enviar comandos remotos '{}'".format( comandos )
-	
-      print "\nApagando indicador. Tiempo encendido = {}".format(self.n)
-      break
-    du2.finish()
-    du2.join()
+	self.in_queue.put(self.comando_off)
+	print "\nApagando Indicador..."
+	time.sleep(self.n)
 
-class modulo:
+class modulo(threading.Thread):
    nombreModulo = ""
    archivoModulo = ""
    archivoPines = ""
@@ -144,6 +63,7 @@ class modulo:
    
    
    def __init__(self):
+     threading.Thread.__init__(self)  # Importante, sin esto no funciona, basta con un copy/paste.
      while True:
        try:
 	 self.nombreModulo = raw_input("Nombre del módulo>")
@@ -161,8 +81,9 @@ class modulo:
        self.com_M = ""
        self.pasa = 0
        self.q = Queue.Queue()
-       #self.T_Comandos = ( dialogoAPI(None, self.q) )
-       self.flag_hilo_exe = 1
+       self.q_T_Indicador = Queue.Queue()
+       #self.flag_hilo_exe = 1
+       self.stop = True
        break
      
    def cargar(self):
@@ -247,10 +168,11 @@ class modulo:
        
      return False
    
-   def f_interfaz():
+   def run(self):
       try:
 	def_manual = raw_input("¿Cargar configuración por defecto?\n(s/n)>")
       except EOFError: #EOF
+	self.stop = False
 	sys.exit(1)  
       if def_manual == "s":
 	print "Cargando configuración inicial por defecto."
@@ -273,6 +195,7 @@ class modulo:
 	try:
 	  interactuado = raw_input("Nombre del dispositivo con el que interactuar>")
 	except EOFError:
+	  self.stop = False
 	  print "--Saliendo del programa--"
 	  break
 	if len(interactuado) == 0:
@@ -285,13 +208,14 @@ class modulo:
 	  continue
 	print "Para el dispositivo '{}' existen las siguientes acciones:".format(interactuado)
 	tipo_actual = self.dicdispositivos[interactuado]
-	self.dic_options[tipo_actual](device, interactuado)
+	self.dic_options[tipo_actual](self, interactuado)
 	
 	#---#
 	if self.pasa == 0:
 	  try:
 	    c_manual = raw_input("¿Introducir el comando indicado?\n(s/n)>")
 	  except EOFError: #EOF
+	    self.stop = False
 	    break    
 	  if c_manual == "s":
 	    s = self.com_M
@@ -299,11 +223,12 @@ class modulo:
 	    try:
 	      s = raw_input("Esperando comandos> ")
 	    except EOFError: #EOF
+	      self.stop = False
 	      break
 	  if len(s) == 0:
 	    continue
 	  
-	  #self.q.put(s)
+	  self.q.put(s)
  
    
    def f_actuadores(self, nombre):
@@ -313,6 +238,7 @@ class modulo:
 	opt = raw_input("Opción>")
       except EOFError:
 	print "--Saliendo del programa--"
+	self.stop = False
 	sys.exit(1)
       if len(opt) == 0:
 	continue
@@ -338,6 +264,7 @@ class modulo:
       break
      
    def f_indicadores(self, nombre):
+     pin_actual = self.dicpines_asignados[nombre]     
      opc_indicador = ""
      while True:
       print "1-Activar indicador \n2-Activar durante cierto tiempo \n3-Activar con un tipo de parpadeo (tiempo apagado/tiempo encendido) \n4-Desactivar"
@@ -345,6 +272,7 @@ class modulo:
 	opt = raw_input("Opción>")
       except EOFError:
 	print "--Saliendo del programa--"
+	self.stop = False
 	sys.exit(1)
       if len(opt) == 0:
 	continue
@@ -353,19 +281,48 @@ class modulo:
 	opc_indicador = "5"
       elif opt == "2":
 	print "Se activará el indicador durante cierto tiempo\n"
+	self.q_T_Indicador.queue.clear()
+	opc_indicador_on = "5"
+	opc_indicador_off = "4"
 	try:
-	  opt = raw_input("Indique en segundos el tiempo durante el que activar el indicador>")
+	  t_wait = raw_input("Indique en segundos el tiempo durante el que activar el indicador>")
         except EOFError:
 	  print "--Saliendo del programa--"
+	  self.stop = False
 	  sys.exit(1)
-	hilo_indicador = T_indicador()
-	hilo_indicador.n = float(opt)
+	com_M_on = self.nombreModulo
+	com_M_on += ":"
+	com_M_on += self.dic_comandos[pin_actual]
+	com_M_off = com_M_on
+	com_M_on += opc_indicador_on
+	com_M_off += opc_indicador_off
+	hilo_indicador = T_indicador(self.q, self.q_T_Indicador, com_M_on, com_M_off, opt)
+	hilo_indicador.n = float(t_wait)
 	hilo_indicador.start() # Se indica a la instancia de hilo que comience su ejecucion
 	self.pasa = 1	# Pasa es un flag para no pedir comandos si se introduce esta opción (en ConsultaAPI3)
 	break
       elif opt == "3":
 	print "Parpadeo\n"
-	# Investigar función parpadeo.
+	self.q_T_Indicador.queue.clear()
+	opc_indicador_on = "5"
+	opc_indicador_off = "4"
+	try:
+	  t_wait = raw_input("Indique en segundos el intervalo de parpadeo del indicador>")
+        except EOFError:
+	  print "--Saliendo del programa--"
+	  self.stop = False
+	  sys.exit(1)
+	com_M_on = self.nombreModulo
+	com_M_on += ":"
+	com_M_on += self.dic_comandos[pin_actual]
+	com_M_off = com_M_on
+	com_M_on += opc_indicador_on
+	com_M_off += opc_indicador_off
+	hilo_indicador = T_indicador(self.q, self.q_T_Indicador, com_M_on, com_M_off, opt)
+	hilo_indicador.n = float(t_wait)
+	hilo_indicador.start() # Se indica a la instancia de hilo que comience su ejecucion
+	self.pasa = 1	# Pasa es un flag para no pedir comandos si se introduce esta opción (en ConsultaAPI3)
+	break
       elif opt == "4":
 	print "Se desactivará el indicador\n"
 	opc_indicador = "4"
@@ -373,18 +330,17 @@ class modulo:
 	print "Opción no válida. Opciones válidas: 1 -- 2 -- 3 -- 4"
 	continue
       print "El pin sobre el que se actuará será el {}\n".format(self.dicpines_asignados[nombre])
-      pin_actual = self.dicpines_asignados[nombre]
       if self.dic_comandos[pin_actual] != "":
 	self.com_M = self.nombreModulo
 	self.com_M += ":"
 	self.com_M += self.dic_comandos[pin_actual]
 	self.com_M += opc_indicador
 	print "Por tanto, el comando utilizado será '{}'\n".format(self.com_M)
-	self.q.put(self.com_M)
-	self.pasa = 1
-	if self.flag_hilo_exe == 1:
-	  #self.T_Comandos.start() # Se indica a la instancia de hilo hilo que comience su ejecucion
-	  self.flag_hilo_exe = 0
+	self.pasa = 0
+	self.q_T_Indicador.put("X")
+	#if self.flag_hilo_exe == 1:
+	  #self.T_Comandos.start() # Se indica a la instancia de hilo que comience su ejecucion
+	  #self.flag_hilo_exe = 0
       else:
 	print "ERROR: No existe comando para trabajar sobre este pin"
 	self.com_M = ""
@@ -397,6 +353,7 @@ class modulo:
 	opt = raw_input("Opción>")
       except EOFError:
 	print "--Saliendo del programa--"
+	self.stop = False
 	sys.exit(1)
       if len(opt) == 0:
 	continue
@@ -430,6 +387,7 @@ class modulo:
 	opt = raw_input("Opción>")
       except EOFError:
 	print "--Saliendo del programa--"
+	self.stop = False
 	sys.exit(1)
       if len(opt) == 0:
 	continue
