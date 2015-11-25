@@ -74,98 +74,18 @@ def hiloPrincipal( du ):
   Breve = False #indica direcciones se muestran en modo breve
 
 
-  #device.T_Comandos.start()
-  
-  #time.sleep(10)
-  
-  # Sólo se puede inicializar un hilo conectado al serial sin que dé fallos
-
   cmds = 'SH, SL, VR, AI, OP, CH, NI, ND'
   print "Enviado comandos AT locales '{}' \n -Espere mientras se inicializa la configuración.".format(cmds)
   du.comandosATlocal( cmds )
 
   time.sleep(7)
   
-  try:
-    def_manual = raw_input("¿Cargar configuración por defecto?\n(s/n)>")
-  except EOFError: #EOF
-    sys.exit(1)  
-  if def_manual == "s":
-    print "Cargando configuración inicial por defecto."
-    for key, value in device.dic_com_default.iteritems():
-	if value != "":
-	  time.sleep(4)
-	  s = "E13:"
-	  s += value
-	  print "Comando enviado: {}".format(s)
-	  device.q.put(s)
-	  '''m = re.search(r"([^:]*):(.*)", s)
-	  ( remota, comandos ) = m.groups()
-	  if len( remota )>0: #se epecifico nombre o dirección
-	    #Probamos primero con el nombre
-	    serial = du.nombretoSerial( remota )
-	    if serial<0: #no se encontró nombre, tratamos dirección 16
-	      serial = du.dir16toSerial( hexStr2Int( remota ) )
-	    if serial<0:
-	      print "Especificación remota '{}' no encontrada, NO enviamos".format( remota )
-	      continue
-	    Remoto = serial
-	    print "Usando dirección remota 0x{:X}".format( Remoto )
-	  if Remoto<0:
-	    print "No hay dirección remota válida almacenada, NO enviamos"
-	    continue
-	  try:
-	    #print "Enviando comandos: >{}<".format(comandos)
-	    du.comandosATremoto( Remoto, -1, comandos )
-	  except:
-	    print "Error al enviar comandos remotos '{}'".format( comandos )
-	else:
-	  print "No hay configuración por defecto para el pin {}.\n".format(key)
-	  # Para no mostrar respuestas API fuera de contexto, poner aquí un time.sleep() o quitar print.
-	  '''
-  
-  #readline.parse_and_bind('tab: complete')
-  readline.parse_and_bind('set editing-mode vi')
+  device.start()
 
-  while True:
-    
-    time.sleep(1)
-    
-    device.pasa = 0
-    #---#
-    try:
-      interactuado = raw_input("Nombre del dispositivo con el que interactuar>")
-    except EOFError:
-      print "--Saliendo del programa--"
-      break
-    if len(interactuado) == 0:
-      continue
-    
-    if device.dicdispositivos.has_key(interactuado):
-      print "El dispositivo '{}' es un {}.\n".format(interactuado, device.dicdispositivos[interactuado])
-    else:
-      print "El nombre de dispositivo indicado no existe, pruebe otra vez\n"
-      continue
-    print "Para el dispositivo '{}' existen las siguientes acciones:".format(interactuado)
-    tipo_actual = device.dicdispositivos[interactuado]
-    device.dic_options[tipo_actual](device, interactuado)
-    
-    #---#
-    if device.pasa == 0:
-      try:
-	c_manual = raw_input("¿Introducir el comando indicado?\n(s/n)>")
-      except EOFError: #EOF
-	break    
-      if c_manual == "s":
-	s = device.com_M
-      else:
-	try:
-	  s = raw_input("Esperando comandos> ")
-	except EOFError: #EOF
-	  break
-      if len(s) == 0:
-	continue
-      #s = device.q.get()
+  while device.stop:
+    while not device.q.empty():
+      s = device.q.get()
+      
       sNorm = s.upper().strip()
       if sNorm=="DEBUG":
 	depura = not depura
