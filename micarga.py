@@ -39,15 +39,19 @@ class T_indicador(threading.Thread):
       
     elif self.blink_or_sleep == "3":
       while True:
+	if self.detener_apagado.empty() == False:
+	  print "\nOperación de parpadeo cancelada."
+	  self.detener_apagado.queue.clear()
+	  break	
 	self.in_queue.put(self.comando_on)
-	print "\nEncendiendo indicador..."
+	#print "\nEncendiendo indicador..."
 	time.sleep(self.n)
 	if self.detener_apagado.empty() == False:
 	  print "\nOperación de parpadeo cancelada."
 	  self.detener_apagado.queue.clear()
 	  break
 	self.in_queue.put(self.comando_off)
-	print "\nApagando Indicador..."
+	#print "\nApagando Indicador..."
 	time.sleep(self.n)
 
 class modulo(threading.Thread):
@@ -58,7 +62,7 @@ class modulo(threading.Thread):
    
    dic_comandos =  {"1":"P0","2":"","3":"","4":"P2","5":"","6":"","7":"P1","8":"","9":"","10":"","11":"D4","12":"","13":"","14":"","15":"D5","16":"D6","17":"D3","18":"D2","19":"D1","20":"D0"}
    
-   dic_com_default = {"1":"P01","2":"","3":"","4":"P20","5":"","6":"","7":"P10","8":"","9":"","10":"","11":"D40","12":"","13":"","14":"","15":"D51","16":"D60","17":"D30","18":"D22","19":"D10","20":"D01"}
+   dic_com_default = {"1":"P01","2":"","3":"","4":"P24","5":"","6":"","7":"P14","8":"","9":"","10":"","11":"D40","12":"","13":"","14":"","15":"D51","16":"D60","17":"D30","18":"D22","19":"D10","20":"D03","Boton":"IC1"}
   # pinescargados = [] #Es posible que así esté mal instanciado
    
    
@@ -82,7 +86,6 @@ class modulo(threading.Thread):
        self.pasa = 0
        self.q = Queue.Queue()
        self.q_T_Indicador = Queue.Queue()
-       #self.flag_hilo_exe = 1
        self.stop = True
        break
      
@@ -185,6 +188,8 @@ class modulo(threading.Thread):
 	    self.q.put(s)
     
       readline.parse_and_bind('set editing-mode vi')
+      
+      print "Introduzca -comando- para invocar un comando directamente\n"
 
       while True:
 	
@@ -201,6 +206,18 @@ class modulo(threading.Thread):
 	if len(interactuado) == 0:
 	  continue
 	
+	if interactuado == "comando":
+	  try:
+	    s = raw_input("Esperando comandos> ")
+	  except EOFError: #EOF
+	    self.stop = False
+	    print "--Saliendo del programa--"
+	    break
+	  if len(s) == 0:
+	    continue
+	  self.q.put(s)
+	  continue
+	  
 	if self.dicdispositivos.has_key(interactuado):
 	  print "El dispositivo '{}' es un {}.\n".format(interactuado, self.dicdispositivos[interactuado])
 	else:
@@ -460,4 +477,4 @@ if __name__ == "__main__":
     if len(com) == 0:
       continue
     
-    #SIGUIENTE: Incorporar comando final a enviar -> Ejem: E15:D01
+    #SIGUIENTE: Comandos de botón. Investigar cómo identificar que se ha pulsado un botón.
