@@ -12,6 +12,20 @@ import readline
 from Conexiones import *
 from DialogaAPI2 import *
     
+class T_pulsador(threading.Thread): 
+  # Se indica que es una clase heredada de Thread que fue importada por threading.
+  def __init__(self, q, q_boton, stop):
+    threading.Thread.__init__(self)  # Importante, sin esto no funciona
+    self.in_queue = q
+    self.in_boton = q_boton
+    self.detener_hilo = stop
+    
+  def run(self): # Contiene el codigo a ejecutar por el hilo.
+    while self.detener_hilo:
+      if self.in_boton.empty() == False:
+	valor = self.in_boton.get()
+	print "Se ha pulsado el botón y se ha devuelto {}".format(valor)
+
 class T_indicador(threading.Thread): 
   # Se indica que es una clase heredada de Thread que fue importada por threading.
   def __init__(self, q, q_indicador, com_M_on, com_M_off, opt):
@@ -86,6 +100,7 @@ class modulo(threading.Thread):
        self.pasa = 0
        self.q = Queue.Queue()
        self.q_T_Indicador = Queue.Queue()
+       self.q_T_Boton = Queue.Queue()
        self.stop = True
        break
      
@@ -188,6 +203,10 @@ class modulo(threading.Thread):
 	    self.q.put(s)
     
       readline.parse_and_bind('set editing-mode vi')
+      
+      hilo_boton = T_pulsador(self.q, self.q_T_Boton, self.stop)
+      
+      hilo_boton.start()
       
       print "Introduzca -comando- para invocar un comando directamente\n"
 
@@ -376,6 +395,7 @@ class modulo(threading.Thread):
 	continue
       if opt == "1":
 	print "Evento pulsación simple\n"		#Pedir variable (dispositivo)
+	
       elif opt == "2":
 	print "Evento pulsación doble\n"		#Pedir variable (dispositivo)
       elif opt == "3":
