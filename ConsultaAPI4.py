@@ -78,7 +78,7 @@ def hiloPrincipal( du ):
   print "Enviado comandos AT locales '{}' \n -Espere mientras se inicializa la configuración.".format(cmds)
   du.comandosATlocal( cmds )
 
-  time.sleep(7)
+  time.sleep(5)
   
   device.start()
 
@@ -151,5 +151,5 @@ if __name__ == "__main__":
   if device.check_config():
     device.nombrar()
   
-  hiloPrincipal( dialogoAPI(None, device.q) )
+  hiloPrincipal( dialogoAPI(None, device.q, device.q_T_Boton) )
   
