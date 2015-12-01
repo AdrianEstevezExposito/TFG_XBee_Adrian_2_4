@@ -21,6 +21,7 @@ while True:
     print "--Saliendo del programa--"
     break
   else:
+    name_aux = name
     name += ".json"
     if name == "exit.json":
       print "--Saliendo del programa--"
@@ -59,6 +60,17 @@ while True:
 	    if v != "":
 	      dicpines[k] = ""
 	  flag = 0
+	  name_aux2 = name_aux
+	  name_aux += "_pines.json"
+	  name_aux2 += "_dispositivos.json"
+	  try:
+	    os.remove(name_aux)
+	  except OSError:
+	    print "No existe archivo de configuración de pines que eliminar para este módulo\n"
+	  try:
+	    os.remove(name_aux2)
+	  except OSError:
+	    print "No existe archivo de configuración de dispositivos que eliminar para este módulo\n"
 	  break
 	else:
 	  borr = raw_input("¿Borrar configuración?(s/n)> ")
