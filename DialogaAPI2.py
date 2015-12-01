@@ -74,7 +74,7 @@ class dialogoAPI(threading.Thread):
     el envio de comandos y respuestas a XBee
     Debe recibir una conexion inicializada
   '''
-  def __init__(self, c, q):
+  def __init__(self, c, q, q_b):
     threading.Thread.__init__(self)
     self.conexion = c
     self.frameIdAT = 0
@@ -88,6 +88,7 @@ class dialogoAPI(threading.Thread):
     self.recOpt = ['ERR', 'Ack', 'Broac']
     self.DevicesType = ['Coord', 'Router', 'End']
     self.in_queue = q
+    self.in_queue_button = q_b
 
 
   def setConexion(self, c):
@@ -482,6 +483,7 @@ class dialogoAPI(threading.Thread):
       direccion = "0x{:016X} (0x{:04X})".format( dir64, dir16 )
     mensaje = "IO data sample: de {} recOpt={} {}".format(
       direccion, recOption,  valor )
+    self.in_queue_button.put( valor )
     logging.info( mensaje )
 
   def recepcionIndentifInd( self, paquete, breve=False):
