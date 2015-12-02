@@ -14,6 +14,8 @@ from DialogaAPI2 import *
     
 class T_pulsador(threading.Thread): 
   # Se indica que es una clase heredada de Thread que fue importada por threading.
+  dic_pulsadores =  {"1":"","2":"","3":"","4":"","5":"","6":"","7":"DIO11","8":"","9":"","10":"","11":"DIO4","12":"DIO7","13":"","14":"","15":"DIO5","16":"","17":"DIO3","18":"DIO2","19":"DIO1","20":"DIO0"}
+  
   def __init__(self, q, q_boton, stop):
     threading.Thread.__init__(self)  # Importante, sin esto no funciona
     self.in_queue = q
@@ -24,7 +26,15 @@ class T_pulsador(threading.Thread):
     while self.detener_hilo:
       if self.in_boton.empty() == False:
 	valor = self.in_boton.get()
-	print "Se ha pulsado el botón y se ha devuelto {}".format(valor)
+	comando = "DIO0"
+	comando += ".*"
+	m = re.search(comando, valor)
+	if m:
+	  print "Se ha pulsado el botón y se ha devuelto {}".format(m.group(0))
+	  if m.group(0) == "DIO0=0":
+	    print "--Pulsado--"
+	  elif m.group(0) == "DIO0=1":
+	    print "--Soltado--"
 
 class T_indicador(threading.Thread): 
   # Se indica que es una clase heredada de Thread que fue importada por threading.
@@ -197,16 +207,19 @@ class modulo(threading.Thread):
 	for key, value in self.dic_com_default.iteritems():
 	  if value != "":
 	    time.sleep(4)
-	    s = "E13:"
+	    s = self.nombreModulo
+	    s += ":"
 	    s += value
 	    print "Comando enviado: {}".format(s)
 	    self.q.put(s)
     
       readline.parse_and_bind('set editing-mode vi')
       
-      hilo_boton = T_pulsador(self.q, self.q_T_Boton, self.stop)
-      
-      hilo_boton.start()
+      for k, v in self.dicpines_str.iteritems():
+	if v == "Pulsador":
+	  hilo_boton = T_pulsador(self.q, self.q_T_Boton, self.stop)
+	  
+	  hilo_boton.start()
       
       print "Introduzca -comando- para invocar un comando directamente\n"
 
