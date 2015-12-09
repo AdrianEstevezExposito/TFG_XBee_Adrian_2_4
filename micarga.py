@@ -14,32 +14,43 @@ from DialogaAPI2 import *
     
 class T_pulsador(threading.Thread): 
   # Se indica que es una clase heredada de Thread que fue importada por threading.
-  dic_pulsadores =  {"1":"","2":"","3":"","4":"","5":"","6":"","7":"DIO11","8":"","9":"","10":"","11":"DIO4","12":"DIO7","13":"","14":"","15":"DIO5","16":"","17":"DIO3","18":"DIO2","19":"DIO1","20":"DIO0"}
+  dic_pulsadores =  {"1":"","2":"","3":"","4":"","5":"","6":"","7":"DIO11","8":"","9":"","10":"","11":"DIO4","12":"GPIO7","13":"","14":"","15":"DIO5","16":"","17":"DIO3","18":"DIO2","19":"DIO1","20":"DIO0"}
   
-  def __init__(self, q, q_boton, stop):
-    threading.Thread.__init__(self)  # Importante, sin esto no funciona
+  def __init__(self, q, q_boton, stop, pin):
+    threading.Thread.__init__(self)	# Importante, sin esto no funciona
     self.in_queue = q
-    self.in_boton = q_boton
+    self.in_boton = q_boton		# Mensaje que llega desde dialogaAPI
     self.detener_hilo = stop
+    self.pin_boton = pin
     
   def run(self): # Contiene el codigo a ejecutar por el hilo.
-    while self.detener_hilo:
+    while self.detener_hilo.empty() == True:
       if self.in_boton.empty() == False:
 	valor = self.in_boton.get()
-	comando = "DIO0"
+	comando = self.dic_pulsadores[self.pin_boton]
+	comando_on = comando
+	comando_off= comando
+	comando_on += "=0"
+	comando_off += "=1"
 	comando += ".*"
 	m = re.search(comando, valor)
 	if m:
-	  print "Se ha pulsado el botón y se ha devuelto {}".format(m.group(0))
-	  if m.group(0) == "DIO0=0":
-	    print "--Pulsado--"
-	  elif m.group(0) == "DIO0=1":
-	    print "--Soltado--"
+	  #print "Se ha pulsado el botón y se ha devuelto {}".format(m.group(0))
+	  m_0 = re.search(comando_on, m.group(0))
+	  m_1 = re.search(comando_off, m.group(0))
+	  if m_0:
+	    print "---Pulsado--- -> {}".format(m_0.group(0))
+	    self.in_queue.put("E13:P25")
+	  if m_1:
+	    print "---Soltado--- -> {}".format(m_1.group(0))
+	    self.in_queue.put("E13:P24")
+	else:
+	  print "ERROR al pulsar el botón. Se ha devuleto {}".format(valor)
 
 class T_indicador(threading.Thread): 
   # Se indica que es una clase heredada de Thread que fue importada por threading.
   def __init__(self, q, q_indicador, com_M_on, com_M_off, opt):
-    threading.Thread.__init__(self)  # Importante, sin esto no funciona
+    threading.Thread.__init__(self)	# Importante, sin esto no funciona
     self.n = 0
     self.in_queue = q
     self.detener_apagado = q_indicador
@@ -86,7 +97,9 @@ class modulo(threading.Thread):
    
    dic_comandos =  {"1":"P0","2":"","3":"","4":"P2","5":"","6":"","7":"P1","8":"","9":"","10":"","11":"D4","12":"","13":"","14":"","15":"D5","16":"D6","17":"D3","18":"D2","19":"D1","20":"D0"}
    
-   dic_com_default = {"1":"P01","2":"","3":"","4":"P24","5":"","6":"","7":"P14","8":"","9":"","10":"","11":"D40","12":"","13":"","14":"","15":"D51","16":"D60","17":"D30","18":"D22","19":"D10","20":"D03","Boton":"IC1"}
+   dic_com_default = {"1":"P01","2":"","3":"","4":"P24","5":"","6":"","7":"P14","8":"","9":"","10":"","11":"D40","12":"","13":"","14":"","15":"D51","16":"D60","17":"D30","18":"D22","19":"D10","20":"D03","Boton":"IC8bf"}
+   
+   
   # pinescargados = [] #Es posible que así esté mal instanciado
    
    
@@ -110,8 +123,9 @@ class modulo(threading.Thread):
        self.pasa = 0
        self.q = Queue.Queue()
        self.q_T_Indicador = Queue.Queue()
-       self.q_T_Boton = Queue.Queue()
+       self.q_T_Boton = Queue.Queue()	#Cola creada para ser utilizada en la creación del hilo principal
        self.stop = True
+       self.q_stop = Queue.Queue()
        break
      
    def cargar(self):
@@ -201,6 +215,7 @@ class modulo(threading.Thread):
 	def_manual = raw_input("¿Cargar configuración por defecto?\n(s/n)>")
       except EOFError: #EOF
 	self.stop = False
+	self.q_stop.put("STOP")
 	sys.exit(1)  
       if def_manual == "s":
 	print "Cargando configuración inicial por defecto."
@@ -215,9 +230,10 @@ class modulo(threading.Thread):
     
       readline.parse_and_bind('set editing-mode vi')
       
+      self.q_stop.queue.clear()
       for k, v in self.dicpines_str.iteritems():
 	if v == "Pulsador":
-	  hilo_boton = T_pulsador(self.q, self.q_T_Boton, self.stop)
+	  hilo_boton = T_pulsador(self.q, self.q_T_Boton, self.q_stop, k)
 	  
 	  hilo_boton.start()
       
@@ -233,6 +249,7 @@ class modulo(threading.Thread):
 	  interactuado = raw_input("Nombre del dispositivo con el que interactuar>")
 	except EOFError:
 	  self.stop = False
+	  self.q_stop.put("STOP")
 	  print "--Saliendo del programa--"
 	  break
 	if len(interactuado) == 0:
@@ -243,6 +260,7 @@ class modulo(threading.Thread):
 	    s = raw_input("Esperando comandos> ")
 	  except EOFError: #EOF
 	    self.stop = False
+	    self.q_stop.put("STOP")
 	    print "--Saliendo del programa--"
 	    break
 	  if len(s) == 0:
@@ -265,6 +283,7 @@ class modulo(threading.Thread):
 	    c_manual = raw_input("¿Introducir el comando indicado?\n(s/n)>")
 	  except EOFError: #EOF
 	    self.stop = False
+	    self.q_stop.put("STOP")
 	    break    
 	  if c_manual == "s":
 	    s = self.com_M
@@ -273,6 +292,7 @@ class modulo(threading.Thread):
 	      s = raw_input("Esperando comandos> ")
 	    except EOFError: #EOF
 	      self.stop = False
+	      self.q_stop.put("STOP")
 	      break
 	  if len(s) == 0:
 	    continue
@@ -288,6 +308,7 @@ class modulo(threading.Thread):
       except EOFError:
 	print "--Saliendo del programa--"
 	self.stop = False
+	self.q_stop.put("STOP")
 	sys.exit(1)
       if len(opt) == 0:
 	continue
@@ -316,12 +337,13 @@ class modulo(threading.Thread):
      pin_actual = self.dicpines_asignados[nombre]     
      opc_indicador = ""
      while True:
-      print "1-Activar indicador \n2-Activar durante cierto tiempo \n3-Activar con un tipo de parpadeo (tiempo apagado/tiempo encendido) \n4-Desactivar"
+      print "1-Activar indicador \n2-Activar durante cierto tiempo \n3-Activar con un tipo de parpadeo (tiempo apagado-tiempo encendido) \n4-Desactivar"
       try:
 	opt = raw_input("Opción>")
       except EOFError:
 	print "--Saliendo del programa--"
 	self.stop = False
+	self.q_stop.put("STOP")
 	sys.exit(1)
       if len(opt) == 0:
 	continue
@@ -338,6 +360,7 @@ class modulo(threading.Thread):
         except EOFError:
 	  print "--Saliendo del programa--"
 	  self.stop = False
+	  self.q_stop.put("STOP")
 	  sys.exit(1)
 	com_M_on = self.nombreModulo
 	com_M_on += ":"
@@ -360,6 +383,7 @@ class modulo(threading.Thread):
         except EOFError:
 	  print "--Saliendo del programa--"
 	  self.stop = False
+	  self.q_stop.put("STOP")
 	  sys.exit(1)
 	com_M_on = self.nombreModulo
 	com_M_on += ":"
@@ -403,12 +427,13 @@ class modulo(threading.Thread):
       except EOFError:
 	print "--Saliendo del programa--"
 	self.stop = False
+	self.q_stop.put("STOP")
 	sys.exit(1)
       if len(opt) == 0:
 	continue
       if opt == "1":
 	print "Evento pulsación simple\n"		#Pedir variable (dispositivo)
-	
+	disp_boton = raw_input("Nombre del dispositivo a manipular>")
       elif opt == "2":
 	print "Evento pulsación doble\n"		#Pedir variable (dispositivo)
       elif opt == "3":
@@ -438,6 +463,7 @@ class modulo(threading.Thread):
       except EOFError:
 	print "--Saliendo del programa--"
 	self.stop = False
+	self.q_stop.put("STOP")
 	sys.exit(1)
       if len(opt) == 0:
 	continue
@@ -510,4 +536,4 @@ if __name__ == "__main__":
     if len(com) == 0:
       continue
     
-    #SIGUIENTE: Comandos de botón. Investigar cómo identificar que se ha pulsado un botón.
+    #SIGUIENTE: Comandos de botón. Investigar tiempo de pulsación.
