@@ -22,6 +22,11 @@ class T_pulsador(threading.Thread):
     self.in_boton = q_boton		# Mensaje que llega desde dialogaAPI
     self.detener_hilo = stop
     self.pin_boton = pin
+    self.empieza = 0.0
+    self.doble_pulsacion = False
+  
+  def opciones(self):
+    
     
   def run(self): # Contiene el codigo a ejecutar por el hilo.
     while self.detener_hilo.empty() == True:
@@ -40,10 +45,27 @@ class T_pulsador(threading.Thread):
 	  m_1 = re.search(comando_off, m.group(0))
 	  if m_0:
 	    print "---Pulsado--- -> {}".format(m_0.group(0))
-	    self.in_queue.put("E13:P25")
+	    self.empieza = time.time()
+	    empieza_int = float(self.empieza)
 	  if m_1:
 	    print "---Soltado--- -> {}".format(m_1.group(0))
-	    self.in_queue.put("E13:P24")
+	    elapsed = time.time() - self.empieza
+	    print "Tiempo de pulsación: {}".format(elapsed)
+	    #self.in_queue.put("E13:P24")
+	    if elapsed < 2.0:
+	      time.sleep(1)
+	      if self.in_boton.empty() == False:
+		print "--Pulsación Doble--"
+		self.doble_pulsacion = True
+	      else:
+		if self.doble_pulsacion == True:
+		  self.doble_pulsacion = False
+		else:
+		  print "--Pulsación Simple--"
+	    elif elapsed < 5.0:
+	      print "--Pulsación Larga--"
+	    elif elapsed > 5.0:
+	      print "--Pulsación Muy Larga--"
 	else:
 	  print "ERROR al pulsar el botón. Se ha devuleto {}".format(valor)
 
@@ -209,6 +231,21 @@ class modulo(threading.Thread):
        print "Configuración de dispositivos cargada con éxito:\n {}\n".format(self.dicdispositivos)
        
      return False
+   
+   def conf_boton(self, nombre_b, opt_b):
+     try:
+       disp_b = raw_input("Nombre del dispositivo con el qu interactuará el botón>")
+     except EOFError: #EOF
+       self.stop = False
+       self.q_stop.put("STOP")
+       sys.exit(1)  
+     if self.dicdispositivos.has_key(disp_b):
+       tipo_disp_b = self.dicdispositivos[disp_b]
+       #CONTINUAR AQUÍ CON EL ENLACE DE DICCIONARIOS (papel de la libreta)
+     else:
+       print "ERROR: El dispositivo indicado no existe\n"
+     
+     
    
    def run(self):
       try:
@@ -433,13 +470,16 @@ class modulo(threading.Thread):
 	continue
       if opt == "1":
 	print "Evento pulsación simple\n"		#Pedir variable (dispositivo)
-	disp_boton = raw_input("Nombre del dispositivo a manipular>")
+	conf_boton(nombre, opt)
       elif opt == "2":
 	print "Evento pulsación doble\n"		#Pedir variable (dispositivo)
+	conf_boton(nombre, opt)
       elif opt == "3":
 	print "Evento pulsación larga\n"		#Pedir variable (dispositivo)
+	conf_boton(nombre, opt)
       elif opt == "4":
 	print "Evento pulsación muy larga\n"		#Pedir variable (dispositivo)
+	conf_boton(nombre, opt)
       else:
 	print "Opción no válida. Opciones válidas: 1 -- 2 -- 3 -- 4" 
 	continue
@@ -536,4 +576,4 @@ if __name__ == "__main__":
     if len(com) == 0:
       continue
     
-    #SIGUIENTE: Comandos de botón. Investigar tiempo de pulsación.
+    #SIGUIENTE: Comandos de botón. Investigar cómo cambiar dispositivo a interactuar segun tipo de pulsacion.
