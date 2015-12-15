@@ -25,7 +25,7 @@ class T_pulsador(threading.Thread):
     self.empieza = 0.0
     self.doble_pulsacion = False
   
-  def opciones(self):
+  #def opciones(self):
     
     
   def run(self): # Contiene el codigo a ejecutar por el hilo.
@@ -64,8 +64,10 @@ class T_pulsador(threading.Thread):
 		  print "--Pulsación Simple--"
 	    elif elapsed < 5.0:
 	      print "--Pulsación Larga--"
-	    elif elapsed > 5.0:
+	    elif elapsed < 100.0:
 	      print "--Pulsación Muy Larga--"
+	    else:
+	      print "Configuración de pulsadores inicializada con éxito"
 	else:
 	  print "ERROR al pulsar el botón. Se ha devuleto {}".format(valor)
 
@@ -140,8 +142,11 @@ class modulo(threading.Thread):
        
        self.dicdispositivos = {}	# diccionario en el que guardar el nombre de cada actuador
        self.dicpines_asignados = {}	# diccionario en el que guardar la asociacion nombre-pin
+       self.dic_lista_botones = {}
+       # diccionario de listas con formato {boton_pulsacion : [dispositivo, accion]}
        
        self.com_M = ""
+       self.config_button = ""
        self.pasa = 0
        self.q = Queue.Queue()
        self.q_T_Indicador = Queue.Queue()
@@ -196,6 +201,8 @@ class modulo(threading.Thread):
      config_pines += "_pines.json"
      config_disp = self.nombreModulo
      config_disp += "_dispositivos.json"
+     self.config_button = self.nombreModulo
+     self.config_button += "_botones.json"
      
      with open(config_pines, 'w') as outfile:
       json.dump(self.dicpines_asignados, outfile, sort_keys = True, indent = 4, ensure_ascii=False)
@@ -233,19 +240,95 @@ class modulo(threading.Thread):
      return False
    
    def conf_boton(self, nombre_b, opt_b):
+     nombre_opt_b = nombre_b + opt_b
      try:
-       disp_b = raw_input("Nombre del dispositivo con el qu interactuará el botón>")
+       disp_b = raw_input("Nombre del dispositivo con el que interactuará el botón>")
      except EOFError: #EOF
        self.stop = False
        self.q_stop.put("STOP")
        sys.exit(1)  
      if self.dicdispositivos.has_key(disp_b):
        tipo_disp_b = self.dicdispositivos[disp_b]
-       #CONTINUAR AQUÍ CON EL ENLACE DE DICCIONARIOS (papel de la libreta)
+       print "El dispositivo '{}' es un {}, y será asignada a {}".format(disp_b, tipo_disp_b, nombre_opt_b)
+       if tipo_disp_b == "Indicador":
+	 while True:
+	    print "1-Activar indicador \n2-Activar durante cierto tiempo \n3-Activar con un tipo de parpadeo (tiempo apagado-tiempo encendido) \n4-Desactivar"
+	    try:
+	      opt_boton = raw_input("Opción>")
+	    except EOFError:
+	      print "--Saliendo del programa--"
+	      self.stop = False
+	      self.q_stop.put("STOP")
+	      sys.exit(1)
+	    if len(opt_boton) == 0:
+	      continue
+	    try:
+	      opt_boton = int(opt_boton)
+	    except ValueError:
+	      print "ERROR: Introduzca un número\n"
+	    if 1 <= opt_boton <= 4:
+	      self.dic_lista_botones[nombre_opt_b] = [disp_b, tipo_disp_b, opt_boton]
+	      print "La configuración de botones queda así: {}".format(self.dic_lista_botones)
+	      with open(self.config_button, 'w') as outfile:
+		json.dump(self.dic_lista_botones, outfile, sort_keys = True, indent = 4, ensure_ascii=False)
+	      break
+	    else:
+	      print "Opción no válida. Opciones válidas: 1 -- 2 -- 3 -- 4\n"
+	      
+       elif tipo_disp_b == "Actuador":
+	 while True:
+	    print "1-Activar actuador \n2-Activar actuador durante cierto tiempo \n3-Desactivar el actuador"
+	    try:
+	      opt_boton = raw_input("Opción>")
+	    except EOFError:
+	      print "--Saliendo del programa--"
+	      self.stop = False
+	      self.q_stop.put("STOP")
+	      sys.exit(1)
+	    if len(opt_boton) == 0:
+	      continue
+	    try:
+	      opt_boton = int(opt_boton)
+	    except ValueError:
+	      print "ERROR: Introduzca un número\n"
+	    if 1 <= opt_boton <= 3:
+	      self.dic_lista_botones[nombre_opt_b] = [disp_b, tipo_disp_b, opt_boton]
+	      print "La configuración de botones queda así: {}".format(self.dic_lista_botones)
+	      with open(self.config_button, 'w') as outfile:
+		json.dump(self.dic_lista_botones, outfile, sort_keys = True, indent = 4, ensure_ascii=False)
+	      break
+	    else:
+	      print "Opción no válida. Opciones válidas: 1 -- 2 -- 3\n"
+	      
+       elif tipo_disp_b == "Analogico":
+	 while True:
+	    print "1-Fijar umbrales mínimo y máximo \n2-Fijar histéresis \n3-Evento zona mínima \n4-Evento zona máxima \n5-Evento zona media"
+	    try:
+	      opt_boton = raw_input("Opción>")
+	    except EOFError:
+	      print "--Saliendo del programa--"
+	      self.stop = False
+	      self.q_stop.put("STOP")
+	      sys.exit(1)
+	    if len(opt_boton) == 0:
+	      continue
+	    try:
+	      opt_boton = int(opt_boton)
+	    except ValueError:
+	      print "ERROR: Introduzca un número\n"
+	    if 1 <= opt_boton <= 5:
+	      self.dic_lista_botones[nombre_opt_b] = [disp_b, tipo_disp_b, opt_boton]
+	      print "La configuración de botones queda así: {}".format(self.dic_lista_botones)
+	      with open(self.config_button, 'w') as outfile:
+		json.dump(self.dic_lista_botones, outfile, sort_keys = True, indent = 4, ensure_ascii=False)
+	      break
+	    else:
+	      print "Opción no válida. Opciones válidas: 1 -- 2 -- 3 -- 4 -- 5\n"
+
      else:
        print "ERROR: El dispositivo indicado no existe\n"
      
-     
+       #CONTINUAR AQUÍ CON EL RESTO DE TIPOS DE DISPOSITIVO
    
    def run(self):
       try:
@@ -470,16 +553,20 @@ class modulo(threading.Thread):
 	continue
       if opt == "1":
 	print "Evento pulsación simple\n"		#Pedir variable (dispositivo)
-	conf_boton(nombre, opt)
+	self.conf_boton(nombre, opt)
+	break
       elif opt == "2":
 	print "Evento pulsación doble\n"		#Pedir variable (dispositivo)
-	conf_boton(nombre, opt)
+	self.conf_boton(nombre, opt)
+	break
       elif opt == "3":
 	print "Evento pulsación larga\n"		#Pedir variable (dispositivo)
-	conf_boton(nombre, opt)
+	self.conf_boton(nombre, opt)
+	break
       elif opt == "4":
 	print "Evento pulsación muy larga\n"		#Pedir variable (dispositivo)
-	conf_boton(nombre, opt)
+	self.conf_boton(nombre, opt)
+	break
       else:
 	print "Opción no válida. Opciones válidas: 1 -- 2 -- 3 -- 4" 
 	continue
