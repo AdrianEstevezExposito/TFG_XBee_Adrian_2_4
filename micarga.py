@@ -184,6 +184,10 @@ class modulo(threading.Thread):
    def nombrar(self):
      for k, v in self.dicpines_str.iteritems():
        if v != "":
+	 if k == "Nombre":
+	   self.nombreModulo = v
+	   print "---Nombre del módulo identificado como:---> {}\n".format(self.nombreModulo)
+	   continue
 	 try:
 	   nombreDisp = raw_input("En el pin {} hay un {}. Distinguir como:>".format(k, v))
 	 except EOFError:
@@ -664,3 +668,4 @@ if __name__ == "__main__":
       continue
     
     #SIGUIENTE: Comandos de botón. Investigar cómo cambiar dispositivo a interactuar segun tipo de pulsacion.
+    #ADEMÁS:    Se pide ahora eliminar la entrada por consola del nombre del módulo. Traerlo desde el json. Continuar desde método nombrar() (Linea 189)
